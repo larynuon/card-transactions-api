@@ -1,0 +1,36 @@
+services:
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      ASPNETCORE_URLS: http://+:8080
+      ConnectionStrings__DefaultConnection: Host=postgres;Port=5432;Database=card_transactions;Username=postgres;Password=postgres
+      Database__ApplyMigrations: "true"
+      TreasuryRates__BaseUrl: https://api.fiscaldata.treasury.gov/services/api/fiscal_service/v1/accounting/od/
+      TreasuryRates__TimeoutSeconds: "10"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    ports:
+      - "8080:8080"
+
+  postgres:
+    image: postgres:16
+    environment:
+      POSTGRES_DB: card_transactions
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d card_transactions"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+
+volumes:
+  postgres-data:

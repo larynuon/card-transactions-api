@@ -1,6 +1,38 @@
 @card_transactions_api_HostAddress = http://localhost:5017
 
-GET {{card_transactions_api_HostAddress}}/weatherforecast/
+POST {{card_transactions_api_HostAddress}}/api/cards
+Content-Type: application/json
+Accept: application/json
+
+{
+  "creditLimit": 1500
+}
+
+###
+
+@cardId = 00000000-0000-0000-0000-000000000000
+
+POST {{card_transactions_api_HostAddress}}/api/purchase-transactions
+Content-Type: application/json
+Accept: application/json
+
+{
+  "cardId": "{{cardId}}",
+  "description": "Laptop stand",
+  "transactionDate": "2026-06-19T10:30:00Z",
+  "amount": 89.95
+}
+
+###
+
+@transactionId = 00000000-0000-0000-0000-000000000000
+
+GET {{card_transactions_api_HostAddress}}/api/purchase-transactions/{{transactionId}}/converted?currency=AUD
+Accept: application/json
+
+###
+
+GET {{card_transactions_api_HostAddress}}/api/cards/{{cardId}}/balance?currency=AUD
 Accept: application/json
 
 ###

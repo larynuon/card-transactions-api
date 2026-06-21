@@ -1,23 +1,53 @@
+using CardTransactionsApi.Data;
+using CardTransactionsApi.Services;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
+
 var builder = WebApplication.CreateBuilder(args);
 
-// Add services to the container.
-
 builder.Services.AddControllers();
-// Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
-builder.Services.AddOpenApi();
+
+builder.Services.AddDbContext<AppDbContext>(options =>
+{
+    var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
+    if (string.IsNullOrWhiteSpace(connectionString))
+    {
+        throw new InvalidOperationException("ConnectionStrings:DefaultConnection is required.");
+    }
+
+    options.UseNpgsql(
+        connectionString,
+        npgsqlOptions => npgsqlOptions.EnableRetryOnFailure());
+});
+
+builder.Services.Configure<TreasuryRatesOptions>(
+    builder.Configuration.GetSection(TreasuryRatesOptions.SectionName));
+
+builder.Services.AddHttpClient<IExchangeRateService, TreasuryExchangeRateService>((services, client) =>
+{
+    var options = services.GetRequiredService<IOptions<TreasuryRatesOptions>>().Value;
+    client.BaseAddress = new Uri(options.BaseUrl);
+    client.Timeout = TimeSpan.FromSeconds(options.TimeoutSeconds);
+});
 
 var app = builder.Build();
 
-// Configure the HTTP request pipeline.
-if (app.Environment.IsDevelopment())
+if (app.Configuration.GetValue<bool>("Database:ApplyMigrations"))
 {
-    app.MapOpenApi();
+    using var scope = app.Services.CreateScope();
+    var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+    db.Database.Migrate();
 }
 
-app.UseHttpsRedirection();
-
-app.UseAuthorization();
+if (!app.Environment.IsEnvironment("Testing"))
+{
+    app.UseHttpsRedirection();
+}
 
 app.MapControllers();
 
 app.Run();
+
+public partial class Program
+{
+}
